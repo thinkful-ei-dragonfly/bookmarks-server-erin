@@ -4,6 +4,7 @@ const express = require('express');
 const uuid = require('uuid/v4');
 const logger = require('../logger');
 const { bookmarks } = require('../store');
+const { isWebUri } = require('valid-url');
 
 const bookmarksRouter = express.Router();
 const bodyParser = express.json();
@@ -23,8 +24,8 @@ bookmarksRouter
         .send('Invalid data');
     }
 
-    if(!url || !url.includes('http')) {
-      logger.error('URL is required with valid http address');
+    if(!url || !isWebUri(url)) {
+      logger.error('Valid URL is required');
       return res
         .status(400)
         .send('Invalid data');
@@ -32,6 +33,13 @@ bookmarksRouter
 
     if(rating && typeof rating !== 'number') {
       logger.error('Rating must be a number');
+      return res
+        .status(400)
+        .send('Invalid data');
+    }
+
+    if((rating && rating <0) || (rating && rating >5)) {
+      logger.error('Rating must be a number between 0 and 5');
       return res
         .status(400)
         .send('Invalid data');
