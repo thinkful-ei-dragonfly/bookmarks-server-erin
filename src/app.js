@@ -9,6 +9,7 @@ const { NODE_ENV } = require('./config');
 const winston = require('winston');
 const { bookmarks } = require('./store');
 const bookmarksRouter = require('./bookmarks/bookmark-router');
+const BookmarksService = require('./bookmarks/bookmarks-service');
 
 const app = express();
 
@@ -33,6 +34,24 @@ const morganOption = (NODE_ENV === 'production')
 app.use(morgan(morganOption));
 app.use(cors());
 app.use(helmet());
+
+app.get('/bookmarks', (req, res, next) => {
+  const knexInstance = req.app.get('db');
+  BookmarksService.getAllBookmarks(knexInstance)
+    .then(bookmarks => {
+      res.json(bookmarks);
+    })
+    .catch(next);
+});
+
+app.get('/bookmarks/:bookmarkId', (req, res, next) => {
+  const knexInstance = req.app.get('db');
+  BookmarksService.getById(knexInstance, req.params.bookmarkId)
+    .then(bookmark => {
+      res.json(bookmark);
+    })
+    .catch(next);
+});
 
 app.use(function validateBearerToken(req, res, next) {
   const apiToken = process.env.API_TOKEN;
