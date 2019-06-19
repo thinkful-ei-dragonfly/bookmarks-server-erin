@@ -3,8 +3,9 @@
 const { expect } = require('chai');
 const knex = require('knex');
 const app = require('../src/app');
+const { makeBookmarksArray } = require('./bookmarks.fixtures');
 
-describe.only('Bookmarks Endpoints', function() {
+describe('Bookmarks Endpoints', function() {
   let db;
 
   before('make knex instance', () => {
@@ -21,53 +22,62 @@ describe.only('Bookmarks Endpoints', function() {
 
   afterEach('cleanup', () => db('bookmarks').truncate());
 
+  describe('GET /bookmarks', () => {
+    context('Given there are books in the db', () => {
+      const testBookmarks = makeBookmarksArray();
+      beforeEach('insert bookmark', () => {
+        return db 
+          .into('bookmarks')
+          .insert(testBookmarks);
+      });
   
-  context('Given there are books in the db', () => {
-    const testBookmarks = [
-      {
-        id: 1,
-        title: 'Something',
-        url: 'https://courses.thinkful.com/ei-node-postgres-v1/checkpoint/9',
-        desc: 'This is a description',
-        rating: '4',
-      },
-      {
-        id: 2,
-        title: 'Something',
-        url: 'https://courses.thinkful.com/ei-node-postgres-v1/checkpoint/9',
-        desc: 'This is a description',
-        rating: '4',
-      },
-      {
-        id: 3,
-        title: 'Something',
-        url: 'https://courses.thinkful.com/ei-node-postgres-v1/checkpoint/9',
-        desc: 'This is a description',
-        rating: '4',
-      }
-    ];
-
-    beforeEach('insert bookmark', () => {
-      return db 
-        .into('bookmarks')
-        .insert(testBookmarks);
+      it('responds with 200 and all bookmarks', () => {
+        return supertest(app)
+          .get('/bookmarks')
+          .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+          .expect(200, testBookmarks);
+      //TO DO: more assertions
+      });
     });
 
-    it('responds with 200 and all bookmarks', () => {
-      return supertest(app)
-        .get('/bookmarks')
-        .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
-        .expect(200, testBookmarks);
-    //TO DO: more assertions
+    context('Given no bookmarks', () => {
+      it('responds with 200 and empty list', () => {
+        return supertest(app)
+          .get('/bookmarks')
+          .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+          .expect(200, []);
+      });
     });
+  });
 
-    it('GET /bookmarks:bookmarkId responds with 200', () => {
-      const bookmarkId = 2;
-      const expectedBookmark = testBookmarks[bookmarkId - 1];
-      return supertest(app)
-        .get(`/bookmarks/${bookmarkId}`)
-        .expect(200, expectedBookmark);
+  describe('GET /bookmarks/:id', () => {
+    context('When there are bookmarks', () => {
+      const testBookmarks = makeBookmarksArray();
+      beforeEach('insert bookmark', () => {
+        return db 
+          .into('bookmarks')
+          .insert(testBookmarks);
+      });
+
+      it('GET /bookmarks:id responds with 200', () => {
+        const bookmarkId = 2;
+        const expectedBookmark = testBookmarks[bookmarkId - 1];
+        return supertest(app)
+          .get(`/bookmarks/${bookmarkId}`)
+          .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+          .expect(200, expectedBookmark);
+      });
     });
-
+    
+    context('When there are no bookmarks', () => {
+      it('responds with 404', () => {
+        return supertest(app)
+          .get('/bookmarks/test')
+          .set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+          .expect(404, {
+            error: { message: 'Bookmark not found' }
+          });
+      });
+    });
   });
 });
